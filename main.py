@@ -152,7 +152,6 @@ class ImageToText:
         img = cv.resize(img, dim, interpolation = cv.INTER_AREA)
 
         if(self._color):
-            print(img[3][3])
             self.ColorMatrix(img)
             return
 
