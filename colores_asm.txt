@@ -1,0 +1,16 @@
+0 - black
+1 - blue
+2 - green
+3 - cyan
+4 - red
+5 - magenta
+6 - brown
+7 - light gray
+8 - gray
+9 - light blue
+10A - light green
+11B - light cyan
+12C - light red
+13D - light magenta
+14E - yellow
+15F - white
