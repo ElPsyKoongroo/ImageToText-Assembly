@@ -34,10 +34,6 @@ inicio = '''.model small
     mov ax, 0A000h
     mov es, ax
 
-    ;mov ax, 04h ;color a elegir
-    mov ah, 0Ch
-    mov bh, 0
-
 '''
 
 final = '''
@@ -46,7 +42,7 @@ final = '''
     int 21h
 end'''
 
-size = 100
+size = 110
 
 import cv2 as cv    #opencv-python
 import numpy as np  #numpy
@@ -167,9 +163,8 @@ class ImageToText:
         self.MatrixBW(img, output)
 
     def GenerateCodeColor(self):
-        toWrite = ((pos_i*320, pos_j, j) for pos_i, i in enumerate(self._matrix) for pos_j, j in enumerate(i))
+        toWrite = ((pos_i*320+pos_j, j) for pos_i, i in enumerate(self._matrix) for pos_j, j in enumerate(i))
 
-        
         offset = 320 - self._ancho
         with open("mainc.asm", "w") as f:
             f.write(inicio)
@@ -177,9 +172,9 @@ class ImageToText:
             for pos, color in toWrite:
                 if(color != actual):
                     actual = color
-                    f.write("    mov ax, {}\n".format(color))
+                    f.write("    mov al, {}d\n".format(color))
 
-                f.write("    mov es:[{}], ax\n".format(pos+offset))
+                f.write("    mov es:[{}], al\n".format(pos+offset))
             f.write(final)
 
     def ColorMatrix(self, img):
