@@ -34,6 +34,8 @@ inicio = '''.model small
     mov ax, 0A000h
     mov es, ax
 
+    mov ax, 0Fh
+
 '''
 
 final = '''
@@ -80,11 +82,11 @@ class ImageToText:
         self._color_maximo  = color_max
         
         if(invert):
-            self._text      = 0
-            self._void      = 1
-        else:
             self._text      = 1
             self._void      = 0
+        else:
+            self._text      = 0
+            self._void      = 1
 
         self._showResult    = showResult
         self._genCode       = generateCode
@@ -107,7 +109,7 @@ class ImageToText:
         cv.destroyAllWindows()
 
     def GenerateCodeBW(self):
-        toWrite = (pos_i*320+pos_j for pos_i, i in enumerate(self._matrix) for pos_j, j in enumerate(i) if j == self._void)
+        toWrite = (pos_i*320+pos_j for pos_i, i in enumerate(self._matrix) for pos_j, j in enumerate(i) if j == self._text)
 
         offset = 320 - self._ancho
 
@@ -193,5 +195,5 @@ class ImageToText:
             self.GenerateCodeColor()
 
 if(__name__ == "__main__"):
-    obj = ImageToText("arch2.png", [110, 110, 0], [255, 255, 255], color=True, generateCode=True)
+    obj = ImageToText("arch2.png", [110, 110, 0], [255, 255, 255], generateCode=True, invert=True)
     obj.Get_Image()
