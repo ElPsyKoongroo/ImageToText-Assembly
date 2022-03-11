@@ -59,7 +59,8 @@ final = '''
     int 21h
 end'''
 
-size = 180
+size_bw = 200
+size_color = 100
 
 from operator import inv
 import cv2 as cv    #opencv-python
@@ -71,7 +72,7 @@ class ImageToText:
     _color_minimo: tuple
     _color_maximo: tuple
     _text: int
-    _void: int
+    _size: int
     _matrix = []
 
     _genCode: bool
@@ -103,6 +104,7 @@ class ImageToText:
         self._genCode       = generateCode
         self._showMatrix    = showMatrix
         self._color         = color
+        self._size = size_color if color else size_bw
 
     def ShowMatrix(self):
         for i in range(self._alto):
@@ -169,7 +171,7 @@ class ImageToText:
 
         max = img.shape[1] if img.shape[1] > img.shape[0] else img.shape[0]
 
-        porcentaje = size / max
+        porcentaje = self._size / max
 
         self._ancho   = int(img.shape[1] * porcentaje)
         self._alto  = int(img.shape[0] * porcentaje)
