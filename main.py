@@ -42,6 +42,13 @@ line_loop:
     jne line_loop
     ret
 
+_lineMacro MACRO p1, p2, p3
+    mov bx, p1
+    mov cx, p2
+    mov ax, p3
+    call line
+ENDM
+
 start:
 
 '''
@@ -52,11 +59,11 @@ final = '''
 end'''
 
 size_bw = 200
-size_color = 100
+size_color = 120
 
-from operator import inv
 import cv2 as cv    #opencv-python
 import numpy as np  #numpy
+from colores import colors as color_map
 
 class ImageToText:
 
@@ -75,8 +82,9 @@ class ImageToText:
     _alto: int
 
     _color: bool
+    _img: np.ndarray
 
-    def __init__(self, imagePath, color_min, color_max, color = False, generateCode = False, showResult = False, showMatrix = False, invert = False):
+    def __init__(self, imagePath, color_min = None, color_max = None, color = False, generateCode = False, showResult = False, showMatrix = False, invert = False):
         '''
         imagePath               : ruta a la imagen
         color_min y color_max   : tupla con los valores RGB de los colores que se quieren buscar
@@ -161,6 +169,11 @@ class ImageToText:
         
         img = cv.imread(self._imagePath)
 
+
+
+        #cv.imshow("Imagenes", cv.cvtColor(cv.resize(img, (500, 750), interpolation = cv.INTER_AREA), cv.COLOR_BGR2GRAY))
+        #cv.waitKey(0)
+
         max = img.shape[1] if img.shape[1] > img.shape[0] else img.shape[0]
 
         porcentaje = self._size / max
@@ -186,9 +199,45 @@ class ImageToText:
 
     def GenerateCodeColor(self):
         toWrite = ((pos_i*320+pos_j, j) for pos_i, i in enumerate(self._matrix) for pos_j, j in enumerate(i))
-
+        #_lineMacro
+        #name = f"{self._imagePath.split('.')[0]}_c.asm"
         offset = 320 - self._ancho
-        with open("mainc.asm", "w") as f:
+        with open("output.asm", "w") as f:
+            f.write(inicio)
+            cont = 0
+            #totalLines = 0
+            for pos, color in toWrite:
+                if(cont == 0):
+                    first = pos
+                    actual = color
+                
+                if(pos-cont == first and color == actual):
+                    cont+=1
+                    continue
+
+                #f.write("    mov al, {}d\n".format(actual))
+                #f.write("    mov cx, {}\n".format(cont))
+                #f.write("    mov bx, {}\n".format(first+offset))
+                #f.write("    call line\n")
+
+                f.write("   _lineMacro {}, {}, {}\n".format(first+offset, cont, actual))
+                cont = 1
+                actual = color
+                first = pos
+
+                #totalLines+=1
+                #if(totalLines == 2000):
+                #    f.write(".code _{}\n".format(totalLines))
+                #    totalLines = 0
+
+            print(offset)
+            f.write(final)
+
+        '''toWrite = ((pos_i*320+pos_j, j) for pos_i, i in enumerate(self._matrix) for pos_j, j in enumerate(i))
+
+        name = f"{self._imagePath.split('.')[0]}_c.asm"
+        offset = 320 - self._ancho
+        with open(name, "w") as f:
             f.write(inicio)
             actual: int = -1
             for pos, color in toWrite:
@@ -197,23 +246,42 @@ class ImageToText:
                     f.write("    mov al, {}d\n".format(color))
 
                 f.write("    mov es:[{}], al\n".format(pos+offset))
-            f.write(final)
+            f.write(final)'''
 
     def ColorMatrix(self, img):
+
+        img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+
 
         for i in range(self._alto):
             self._matrix.append([])
             for j in range(self._ancho):
-                r: int = int(img[i][j][0]/32)
-                g: int = int(img[i][j][1]/32)
-                b: int = int(img[i][j][2]/32)
 
-                self._matrix[i].append(( r << 5) | ( g << 2 ) | ( b )) # & 0xffffffff
+                #r: int = int(img[i][j][0])
+                #g: int = int(img[i][j][1])
+                #b: int = int(img[i][j][2])
 
-        print(self._matrix[3][3])
+                #color = (r*6/256)*36 + (g*6/256)*6 + (b*6/256)
+                #color = ( r << 5) | ( g << 2 ) | ( b )
+                #while color not in color_map:
+                #    color += 1
+                #color = color_map.index(color)
+
+                final_color = 16
+                aux = 16
+                color = img[i][j]
+
+                while color > aux:
+                    final_color += 1
+                    aux += 16
+
+
+                self._matrix[i].append(final_color) # & 0xffffffff
+
         if self._genCode:
             self.GenerateCodeColor()
 
 if(__name__ == "__main__"):
-    obj = ImageToText("arch.png", [110, 110, 0], [255, 255, 255], generateCode=True)
+    #[110, 110, 0], [255, 255, 255], (color azul)
+    obj = ImageToText("fotos/Foticos.jpg", color=True, generateCode=True)
     obj.Get_Image()

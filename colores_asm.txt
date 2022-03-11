@@ -15,3 +15,5 @@
 14E - yellow
 15F - white
 a
+
+mount letra ruta_absoluta_carpeta
