@@ -19,13 +19,7 @@ Funcionamiento:
 '''
 
 inicio = '''.model small
-.data
-    negro db 00h
-
 .code
-
-    mov ax, seg negro
-    mov ds, ax
 
     mov al, 13h
     mov ah, 0
@@ -34,8 +28,7 @@ inicio = '''.model small
     mov ax, 0A000h
     mov es, ax
 
-    mov ax, 0Fh
-
+    mov ax, 0Fh; Color con el que se rellena el dibujo
     jmp start
 
 line:
@@ -54,7 +47,6 @@ start:
 '''
 
 final = '''
-
     mov ah, 4Ch
     int 21h
 end'''
@@ -142,7 +134,7 @@ class ImageToText:
 
                 f.write("    mov cx, {}\n".format(cont))
                 f.write("    mov bx, {}\n".format(first+offset))
-                f.write("    call line\n\n")
+                f.write("    call line\n")
                 cont = 0
 
 
