@@ -36,6 +36,21 @@ inicio = '''.model small
 
     mov ax, 0Fh
 
+    jmp start
+
+line:
+    mov dx, 0
+
+line_loop:
+    mov es:[bx], al
+    inc dx
+    inc bx
+    cmp dx, cx
+    jne line_loop
+    ret
+
+start:
+
 '''
 
 final = '''
@@ -44,8 +59,9 @@ final = '''
     int 21h
 end'''
 
-size = 110
+size = 180
 
+from operator import inv
 import cv2 as cv    #opencv-python
 import numpy as np  #numpy
 
@@ -81,12 +97,7 @@ class ImageToText:
         self._color_minimo  = color_min
         self._color_maximo  = color_max
         
-        if(invert):
-            self._text      = 1
-            self._void      = 0
-        else:
-            self._text      = 0
-            self._void      = 1
+        self._text = 1 if invert else 0
 
         self._showResult    = showResult
         self._genCode       = generateCode
@@ -96,7 +107,7 @@ class ImageToText:
     def ShowMatrix(self):
         for i in range(self._alto):
             for j in range(self._ancho):
-                if(self._matrix[i][j] == 1):
+                if(self._matrix[i][j] == self._text):
                     print("  ", end="")
                 else:
                     print("* ", end="")
@@ -113,10 +124,26 @@ class ImageToText:
 
         offset = 320 - self._ancho
 
+        #f.write("    mov es:[{}], al\n".format(i+offset))
         with open("main.asm", "w") as f:
             f.write(inicio)
+            cont = 0
+            first = -1
             for i in toWrite:
-                f.write("    mov es:[{}], al\n".format(i+offset))
+                
+                if(cont == 0):
+                    first = i
+                
+                if(i-cont == first):
+                    cont+=1
+                    continue
+
+                f.write("    mov cx, {}\n".format(cont))
+                f.write("    mov bx, {}\n".format(first+offset))
+                f.write("    call line\n\n")
+                cont = 0
+
+
             f.write(final)
 
     def MatrixBW(self, img, output):
@@ -124,9 +151,9 @@ class ImageToText:
             self._matrix.append([])
             for j in range(self._ancho):
                 if (output[i][j][0] != 0 or output[i][j][1] != 0 or output[i][j][2] != 0):
-                    self._matrix[i].append(self._text)
+                    self._matrix[i].append(1)
                 else:
-                    self._matrix[i].append(self._void)
+                    self._matrix[i].append(0)
 
         if self._showResult:
             self.ShowImage(img, output)
@@ -194,5 +221,5 @@ class ImageToText:
             self.GenerateCodeColor()
 
 if(__name__ == "__main__"):
-    obj = ImageToText("arch2.png", [110, 110, 0], [255, 255, 255], generateCode=True, invert=True)
+    obj = ImageToText("arch.png", [110, 110, 0], [255, 255, 255], generateCode=True)
     obj.Get_Image()
