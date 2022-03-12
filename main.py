@@ -59,7 +59,7 @@ final = '''
 end'''
 
 size_bw = 200
-size_color = 120
+size_color = 200
 
 import cv2 as cv    #opencv-python
 import numpy as np  #numpy
@@ -169,12 +169,24 @@ class ImageToText:
         
         img = cv.imread(self._imagePath)
 
-
-
-        #cv.imshow("Imagenes", cv.cvtColor(cv.resize(img, (500, 750), interpolation = cv.INTER_AREA), cv.COLOR_BGR2GRAY))
-        #cv.waitKey(0)
-
         max = img.shape[1] if img.shape[1] > img.shape[0] else img.shape[0]
+
+        if(self._color):
+            out = False
+            for sz in range(140, 0, -1):
+                porcentaje = sz / max
+                self._ancho   = int(img.shape[1] * porcentaje)
+                self._alto  = int(img.shape[0] * porcentaje)
+                img2 = cv.resize(img, (self._ancho, self._alto), interpolation = cv.INTER_AREA)
+                if(self.ColorMatrix(img2)):
+                    with open("output.asm", "r") as f:
+                        count = sum(1 for _ in f)
+                        #print(count)
+                        if count < 4_500:
+                            out = True
+                    if out: break
+            return
+
 
         porcentaje = self._size / max
 
@@ -183,11 +195,8 @@ class ImageToText:
 
         dim = (self._ancho, self._alto)
 
-        img = cv.resize(img, dim, interpolation = cv.INTER_AREA)
 
-        if(self._color):
-            self.ColorMatrix(img)
-            return
+        img = cv.resize(img, dim, interpolation = cv.INTER_AREA)
 
         minimo = np.array(self._color_minimo, dtype = "uint8")
         maximo = np.array(self._color_maximo, dtype = "uint8")
@@ -197,15 +206,15 @@ class ImageToText:
         
         self.MatrixBW(img, output)
 
-    def GenerateCodeColor(self):
+    def GenerateCodeColor(self) -> bool:
         toWrite = ((pos_i*320+pos_j, j) for pos_i, i in enumerate(self._matrix) for pos_j, j in enumerate(i))
         #_lineMacro
         #name = f"{self._imagePath.split('.')[0]}_c.asm"
         offset = 320 - self._ancho
+        #numberOfMilles = 0
         with open("output.asm", "w") as f:
             f.write(inicio)
             cont = 0
-            #totalLines = 0
             for pos, color in toWrite:
                 if(cont == 0):
                     first = pos
@@ -214,24 +223,22 @@ class ImageToText:
                 if(pos-cont == first and color == actual):
                     cont+=1
                     continue
+                #if(first+offset-numberOfMilles*500 >= 500):
+                #    numberOfMilles+=1
+                #    f.write("   mov ax, es\n")
+                #    f.write("   add ax, 500d\n")
+                #    f.write("   mov es, ax\n")
 
-                #f.write("    mov al, {}d\n".format(actual))
-                #f.write("    mov cx, {}\n".format(cont))
-                #f.write("    mov bx, {}\n".format(first+offset))
-                #f.write("    call line\n")
-
+                #if(first + offset >= 30_000): #2^15
+                #    return False
+                #f.write("   _lineMacro {}, {}, {}\n".format(first+offset-numberOfMilles*500, cont, actual))
                 f.write("   _lineMacro {}, {}, {}\n".format(first+offset, cont, actual))
                 cont = 1
                 actual = color
                 first = pos
 
-                #totalLines+=1
-                #if(totalLines == 2000):
-                #    f.write(".code _{}\n".format(totalLines))
-                #    totalLines = 0
-
-            print(offset)
             f.write(final)
+            return True
 
         '''toWrite = ((pos_i*320+pos_j, j) for pos_i, i in enumerate(self._matrix) for pos_j, j in enumerate(i))
 
@@ -251,8 +258,7 @@ class ImageToText:
     def ColorMatrix(self, img):
 
         img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-
-
+        self._matrix = []
         for i in range(self._alto):
             self._matrix.append([])
             for j in range(self._ancho):
@@ -277,11 +283,12 @@ class ImageToText:
 
 
                 self._matrix[i].append(final_color) # & 0xffffffff
-
+        print("Probando tamano: {} x {}".format(len(self._matrix[0]), len(self._matrix)))
         if self._genCode:
-            self.GenerateCodeColor()
+            return self.GenerateCodeColor()
+        return True
 
 if(__name__ == "__main__"):
     #[110, 110, 0], [255, 255, 255], (color azul)
-    obj = ImageToText("fotos/Foticos.jpg", color=True, generateCode=True)
+    obj = ImageToText("fotos/yl1.jpg", color=True, generateCode=True)
     obj.Get_Image()
