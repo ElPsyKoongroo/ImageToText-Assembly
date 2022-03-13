@@ -24,6 +24,39 @@
 #        #f.write("{}:{},\n".format(x,y))
 #    f.write("colors = " + str(lista))
 #
+from colores import *
+import cv2 as cv
+import numpy as np
 
-for sz in range(200, 0, -1):
-    print(sz)
+input = [85, 255, 245]
+colores = colors
+
+ #find the closest rgb color in a list of colors
+def closest_colour(requested_colour):
+    min_colours = {}
+    for name in colores:
+        r_c, g_c, b_c = name
+        rd = (r_c - requested_colour[0]) ** 2
+        gd = (g_c - requested_colour[1]) ** 2
+        bd = (b_c - requested_colour[2]) ** 2
+        min_colours[(rd + gd + bd)] = name
+    return min_colours[min(min_colours.keys())]
+
+print(closest_colour(input))
+
+print(colores.index(closest_colour(input)))
+
+
+'''
+
+
+
+67 B7 46
+
+67 86 46
+
+67 87 49
+
+
+
+'''

@@ -62,8 +62,10 @@ size_bw = 200
 size_color = 200
 
 import cv2 as cv    #opencv-python
-import numpy as np  #numpy
-from colores import colors as color_map
+import numpy as np
+from color_map import closest_colour  #numpy
+from colores import colors as RGB_COLORS
+from math import pow
 
 class ImageToText:
 
@@ -105,6 +107,22 @@ class ImageToText:
         self._showMatrix    = showMatrix
         self._color         = color
         self._size = size_color if color else size_bw
+    
+    @staticmethod
+    def closest_colour(requested_colour) -> int:
+        min_colours = {}
+        for name in RGB_COLORS:
+            r_c, g_c, b_c = name
+            rd = int(pow((r_c - requested_colour[0]), 2))
+            gd = int(pow((g_c - requested_colour[1]), 2))
+            bd = int(pow((b_c - requested_colour[2]), 2))
+            min_colours[(rd + gd + bd)] = name
+
+        color = min_colours[min(min_colours.keys())]
+
+        r_color = RGB_COLORS.index(color)
+
+        return r_color
 
     def ShowMatrix(self):
         for i in range(self._alto):
@@ -170,10 +188,28 @@ class ImageToText:
         img = cv.imread(self._imagePath)
 
         max = img.shape[1] if img.shape[1] > img.shape[0] else img.shape[0]
-
+        '''
         if(self._color):
             out = False
             for sz in range(140, 0, -1):
+                porcentaje = sz / max
+                self._ancho   = int(img.shape[1] * porcentaje)
+                self._alto  = int(img.shape[0] * porcentaje)
+                img2 = cv.resize(img, (self._ancho, self._alto), interpolation = cv.INTER_AREA)
+                if(self.GrayMatrix(img2)):
+                    with open("output.asm", "r") as f:
+                        count = sum(1 for _ in f)
+                        #print(count)
+                        if count < 4_500:
+                            out = True
+                    if out: break
+            return
+        '''
+
+
+        if self._color:
+            out = False
+            for sz in range(150, 0, -1):
                 porcentaje = sz / max
                 self._ancho   = int(img.shape[1] * porcentaje)
                 self._alto  = int(img.shape[0] * porcentaje)
@@ -206,12 +242,11 @@ class ImageToText:
         
         self.MatrixBW(img, output)
 
-    def GenerateCodeColor(self) -> bool:
+    def GenerateCodeGray(self) -> bool:
         toWrite = ((pos_i*320+pos_j, j) for pos_i, i in enumerate(self._matrix) for pos_j, j in enumerate(i))
-        #_lineMacro
-        #name = f"{self._imagePath.split('.')[0]}_c.asm"
+
         offset = 320 - self._ancho
-        #numberOfMilles = 0
+
         with open("output.asm", "w") as f:
             f.write(inicio)
             cont = 0
@@ -223,15 +258,7 @@ class ImageToText:
                 if(pos-cont == first and color == actual):
                     cont+=1
                     continue
-                #if(first+offset-numberOfMilles*500 >= 500):
-                #    numberOfMilles+=1
-                #    f.write("   mov ax, es\n")
-                #    f.write("   add ax, 500d\n")
-                #    f.write("   mov es, ax\n")
 
-                #if(first + offset >= 30_000): #2^15
-                #    return False
-                #f.write("   _lineMacro {}, {}, {}\n".format(first+offset-numberOfMilles*500, cont, actual))
                 f.write("   _lineMacro {}, {}, {}\n".format(first+offset, cont, actual))
                 cont = 1
                 actual = color
@@ -255,23 +282,13 @@ class ImageToText:
                 f.write("    mov es:[{}], al\n".format(pos+offset))
             f.write(final)'''
 
-    def ColorMatrix(self, img):
+    def GrayMatrix(self, img):
 
         img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
         self._matrix = []
         for i in range(self._alto):
             self._matrix.append([])
             for j in range(self._ancho):
-
-                #r: int = int(img[i][j][0])
-                #g: int = int(img[i][j][1])
-                #b: int = int(img[i][j][2])
-
-                #color = (r*6/256)*36 + (g*6/256)*6 + (b*6/256)
-                #color = ( r << 5) | ( g << 2 ) | ( b )
-                #while color not in color_map:
-                #    color += 1
-                #color = color_map.index(color)
 
                 final_color = 16
                 aux = 16
@@ -282,13 +299,28 @@ class ImageToText:
                     aux += 16
 
 
-                self._matrix[i].append(final_color) # & 0xffffffff
+                self._matrix[i].append(final_color)
         print("Probando tamano: {} x {}".format(len(self._matrix[0]), len(self._matrix)))
         if self._genCode:
-            return self.GenerateCodeColor()
+            return self.GenerateCodeGray()
         return True
+
+    def ColorMatrix(self, img):
+        self._matrix = []
+        for i in range(self._alto):
+            self._matrix.append([])
+            for j in range(self._ancho):
+                b,g,r = img[i][j]
+                color = (r,g,b)
+                self._matrix[i].append(self.closest_colour(color))
+
+        print("Probando tamano: {} x {}".format(len(self._matrix[0]), len(self._matrix)))
+        if self._genCode:
+            return self.GenerateCodeGray()
+        return True
+
 
 if(__name__ == "__main__"):
     #[110, 110, 0], [255, 255, 255], (color azul)
-    obj = ImageToText("fotos/yl1.jpg", color=True, generateCode=True)
+    obj = ImageToText("fotos/gato.jpg", color=True, generateCode=True)
     obj.Get_Image()
