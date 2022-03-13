@@ -206,10 +206,10 @@ class ImageToText:
             return
         '''
 
-
+        self.cached_colors = {}
         if self._color:
             out = False
-            for sz in range(150, 0, -1):
+            for sz in range(200, 0, -1):
                 porcentaje = sz / max
                 self._ancho   = int(img.shape[1] * porcentaje)
                 self._alto  = int(img.shape[0] * porcentaje)
@@ -217,7 +217,6 @@ class ImageToText:
                 if(self.ColorMatrix(img2)):
                     with open("output.asm", "r") as f:
                         count = sum(1 for _ in f)
-                        #print(count)
                         if count < 4_500:
                             out = True
                     if out: break
@@ -259,28 +258,15 @@ class ImageToText:
                     cont+=1
                     continue
 
-                f.write("   _lineMacro {}, {}, {}\n".format(first+offset, cont, actual))
+                if(actual != 0):
+                    f.write("   _lineMacro {}, {}, {}\n".format(first+offset, cont, actual))
+
                 cont = 1
                 actual = color
                 first = pos
 
             f.write(final)
             return True
-
-        '''toWrite = ((pos_i*320+pos_j, j) for pos_i, i in enumerate(self._matrix) for pos_j, j in enumerate(i))
-
-        name = f"{self._imagePath.split('.')[0]}_c.asm"
-        offset = 320 - self._ancho
-        with open(name, "w") as f:
-            f.write(inicio)
-            actual: int = -1
-            for pos, color in toWrite:
-                if(color != actual):
-                    actual = color
-                    f.write("    mov al, {}d\n".format(color))
-
-                f.write("    mov es:[{}], al\n".format(pos+offset))
-            f.write(final)'''
 
     def GrayMatrix(self, img):
 
@@ -312,7 +298,12 @@ class ImageToText:
             for j in range(self._ancho):
                 b,g,r = img[i][j]
                 color = (r,g,b)
-                self._matrix[i].append(self.closest_colour(color))
+                if color in self.cached_colors.keys():
+                    self._matrix[i].append(self.cached_colors[color])
+                else:
+                    closest = self.closest_colour(color)
+                    self.cached_colors[color] = closest
+                    self._matrix[i].append(closest)
 
         print("Probando tamano: {} x {}".format(len(self._matrix[0]), len(self._matrix)))
         if self._genCode:
@@ -322,5 +313,5 @@ class ImageToText:
 
 if(__name__ == "__main__"):
     #[110, 110, 0], [255, 255, 255], (color azul)
-    obj = ImageToText("fotos/gato.jpg", color=True, generateCode=True)
+    obj = ImageToText("fotos/ss.jpg", color=True, generateCode=True)
     obj.Get_Image()
