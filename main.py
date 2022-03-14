@@ -61,7 +61,6 @@ end'''
 size_bw = 200
 size_color = 200
 
-from token import EXACT_TOKEN_TYPES
 import cv2 as cv    #opencv-python
 import numpy as np
 from colores import colors as RGB_COLORS
