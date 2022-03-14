@@ -19,6 +19,7 @@ Funcionamiento:
 '''
 
 inicio = '''.model small
+.stack 200h
 .code
 
     mov al, 13h
@@ -63,7 +64,6 @@ size_color = 200
 
 import cv2 as cv    #opencv-python
 import numpy as np
-from color_map import closest_colour  #numpy
 from colores import colors as RGB_COLORS
 from math import pow
 
@@ -260,6 +260,10 @@ class ImageToText:
 
                 if(actual != 0):
                     f.write("   _lineMacro {}, {}, {}\n".format(first+offset, cont, actual))
+                    #f.write("  mov bx, {}\n".format(first+offset))
+                    #f.write("  mov cx, {}\n".format(cont))
+                    #f.write("  mov ax, {}\n".format(actual))
+                    #f.write("  call line\n")
 
                 cont = 1
                 actual = color
@@ -313,5 +317,5 @@ class ImageToText:
 
 if(__name__ == "__main__"):
     #[110, 110, 0], [255, 255, 255], (color azul)
-    obj = ImageToText("fotos/ss.jpg", color=True, generateCode=True)
+    obj = ImageToText("fotos/ero1.jpg", color=True, generateCode=True)
     obj.Get_Image()
