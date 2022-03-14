@@ -61,11 +61,12 @@ end'''
 size_bw = 200
 size_color = 200
 
+from token import EXACT_TOKEN_TYPES
 import cv2 as cv    #opencv-python
 import numpy as np
-from color_map import closest_colour  #numpy
 from colores import colors as RGB_COLORS
 from math import pow
+import os
 
 class ImageToText:
 
@@ -83,19 +84,35 @@ class ImageToText:
     _ancho: int
     _alto: int
 
-    _color: bool
+    _color: int
     _img: np.ndarray
 
-    def __init__(self, imagePath, color_min = None, color_max = None, color = False, generateCode = False, showResult = False, showMatrix = False, invert = False):
+    def __init__(self, imagePath, color, color_min = None, color_max = None, generateCode = False, showResult = False, showMatrix = False, invert = False):
         '''
         imagePath               : ruta a la imagen
-        color_min y color_max   : tupla con los valores RGB de los colores que se quieren buscar
-        color                   : si es True, se genera en color, si es False, se genera B&W
+        color                   : 0 -> B&W, 1 -> Gray, 2 -> Color
+        color_min y color_max   : tupla con los valores RGB de los colores que se quieren buscar (solo modo B&W)
         generateCode            : genera el codigo de la imagen para ensamblador
-        showResult              : muestra la imagen original y la imagen con la máscara ya aplicada
-        showMatrix              : muestra la matriz de la imagen en consola
-        invert                  : invierte la seleccion en el resultado final (prueba si no estas seguro)
+        showResult              : muestra la imagen original y la imagen con la máscara ya aplicada (solo modo B&W y Gray)
+        showMatrix              : muestra la matriz de la imagen en consola (solo modo B&W)
+        invert                  : invierte la seleccion en el resultado final (solo modo B&W)
+
+        Cualquier variable que sea pasada por parametro y no sea necesaria sera ignorada
         '''
+
+        if color == 0:
+            if color_min is None or color_max is None:
+                raise Exception("Color B&W requiere color_min y color_max")
+
+        if imagePath is None:
+            raise Exception("imagePath es requerido")
+
+        elif not os.path.exists(imagePath):
+            raise Exception("imagePath no existe")
+
+        elif not os.path.isfile(imagePath):
+            raise Exception("imagePath no es un archivo")
+
         self._imagePath     = imagePath
         self._color_minimo  = color_min
         self._color_maximo  = color_max
@@ -139,7 +156,7 @@ class ImageToText:
         cv.waitKey(0)
         cv.destroyAllWindows()
 
-    def GenerateCodeBW(self):
+    def GenerateCodeBW(self) -> bool:
         toWrite = (pos_i*320+pos_j for pos_i, i in enumerate(self._matrix) for pos_j, j in enumerate(i) if j == self._text)
 
         offset = 320 - self._ancho
@@ -165,83 +182,9 @@ class ImageToText:
 
 
             f.write(final)
+        return True
 
-    def MatrixBW(self, img, output):
-        for i in range(self._alto):
-            self._matrix.append([])
-            for j in range(self._ancho):
-                if (output[i][j][0] != 0 or output[i][j][1] != 0 or output[i][j][2] != 0):
-                    self._matrix[i].append(1)
-                else:
-                    self._matrix[i].append(0)
-
-        if self._showResult:
-            self.ShowImage(img, output)
-        if self._showMatrix:
-            self.ShowMatrix()
-
-        if self._genCode:
-            self.GenerateCodeBW()
-
-    def Get_Image(self):
-        
-        img = cv.imread(self._imagePath)
-
-        max = img.shape[1] if img.shape[1] > img.shape[0] else img.shape[0]
-        '''
-        if(self._color):
-            out = False
-            for sz in range(140, 0, -1):
-                porcentaje = sz / max
-                self._ancho   = int(img.shape[1] * porcentaje)
-                self._alto  = int(img.shape[0] * porcentaje)
-                img2 = cv.resize(img, (self._ancho, self._alto), interpolation = cv.INTER_AREA)
-                if(self.GrayMatrix(img2)):
-                    with open("output.asm", "r") as f:
-                        count = sum(1 for _ in f)
-                        #print(count)
-                        if count < 4_500:
-                            out = True
-                    if out: break
-            return
-        '''
-
-        self.cached_colors = {}
-        if self._color:
-            out = False
-            for sz in range(200, 0, -1):
-                porcentaje = sz / max
-                self._ancho   = int(img.shape[1] * porcentaje)
-                self._alto  = int(img.shape[0] * porcentaje)
-                img2 = cv.resize(img, (self._ancho, self._alto), interpolation = cv.INTER_AREA)
-                if(self.ColorMatrix(img2)):
-                    with open("output.asm", "r") as f:
-                        count = sum(1 for _ in f)
-                        if count < 4_500:
-                            out = True
-                    if out: break
-            return
-
-
-        porcentaje = self._size / max
-
-        self._ancho   = int(img.shape[1] * porcentaje)
-        self._alto  = int(img.shape[0] * porcentaje)
-
-        dim = (self._ancho, self._alto)
-
-
-        img = cv.resize(img, dim, interpolation = cv.INTER_AREA)
-
-        minimo = np.array(self._color_minimo, dtype = "uint8")
-        maximo = np.array(self._color_maximo, dtype = "uint8")
-
-        mask = cv.inRange(img, minimo, maximo)
-        output = cv.bitwise_and(img, img, mask = mask)
-        
-        self.MatrixBW(img, output)
-
-    def GenerateCodeGray(self) -> bool:
+    def GenerateCode(self) -> bool:
         toWrite = ((pos_i*320+pos_j, j) for pos_i, i in enumerate(self._matrix) for pos_j, j in enumerate(i))
 
         offset = 320 - self._ancho
@@ -266,7 +209,24 @@ class ImageToText:
                 first = pos
 
             f.write(final)
-            return True
+        return True
+
+    def MatrixBW(self, img, output):
+        for i in range(self._alto):
+            self._matrix.append([])
+            for j in range(self._ancho):
+                if (output[i][j][0] != 0 or output[i][j][1] != 0 or output[i][j][2] != 0):
+                    self._matrix[i].append(1)
+                else:
+                    self._matrix[i].append(0)
+
+        if self._showResult:
+            self.ShowImage(img, output)
+        if self._showMatrix:
+            self.ShowMatrix()
+
+        if self._genCode:
+            self.GenerateCodeBW()
 
     def GrayMatrix(self, img):
 
@@ -287,11 +247,9 @@ class ImageToText:
 
                 self._matrix[i].append(final_color)
         print("Probando tamano: {} x {}".format(len(self._matrix[0]), len(self._matrix)))
-        if self._genCode:
-            return self.GenerateCodeGray()
-        return True
 
     def ColorMatrix(self, img):
+
         self._matrix = []
         for i in range(self._alto):
             self._matrix.append([])
@@ -306,12 +264,65 @@ class ImageToText:
                     self._matrix[i].append(closest)
 
         print("Probando tamano: {} x {}".format(len(self._matrix[0]), len(self._matrix)))
-        if self._genCode:
-            return self.GenerateCodeGray()
-        return True
 
+    def Get_Image_BW(self, img, max):
+        porcentaje = self._size / max
+
+        self._ancho   = int(img.shape[1] * porcentaje)
+        self._alto  = int(img.shape[0] * porcentaje)
+
+        dim = (self._ancho, self._alto)
+
+
+        img = cv.resize(img, dim, interpolation = cv.INTER_AREA)
+
+        minimo = np.array(self._color_minimo, dtype = "uint8")
+        maximo = np.array(self._color_maximo, dtype = "uint8")
+
+        mask = cv.inRange(img, minimo, maximo)
+        output = cv.bitwise_and(img, img, mask = mask)
+        
+        self.MatrixBW(img, output)
+
+    def Get_Image(self):
+        
+        img = cv.imread(self._imagePath)
+
+        max = img.shape[1] if img.shape[1] > img.shape[0] else img.shape[0]
+
+        if self._color == 0:
+            self.Get_Image_BW(img, max)
+            return
+
+        self.cached_colors = {}
+        out = False
+        matrixCreated: bool
+
+        for sz in range(130, 0, -5):
+            porcentaje = sz / max
+            self._ancho   = int(img.shape[1] * porcentaje)
+            self._alto  = int(img.shape[0] * porcentaje)
+            img2 = cv.resize(img, (self._ancho, self._alto), interpolation = cv.INTER_AREA)
+
+            if self._color == 1:
+                img2 = cv.cvtColor(img2, cv.COLOR_BGR2GRAY)
+                self.GrayMatrix(img2)
+
+            else:
+                self.ColorMatrix(img2)
+
+            if self._genCode:
+                if not self.GenerateCode():
+                    raise Exception("No se pudo generar el codigo")
+
+                with open("output.asm", "r") as f:
+                    count = sum(1 for _ in f)
+                    if count < 4_500:
+                        out = True
+                if out: break
+        return
 
 if(__name__ == "__main__"):
     #[110, 110, 0], [255, 255, 255], (color azul)
-    obj = ImageToText("fotos/ss.jpg", color=True, generateCode=True)
+    obj = ImageToText("pipo.jpg", color=2, generateCode=True)
     obj.Get_Image()
