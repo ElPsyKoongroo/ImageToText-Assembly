@@ -297,7 +297,7 @@ class ImageToText:
         self.cached_colors = {}
         out = False
 
-        for sz in range(130, 0, -5):
+        for sz in range(200, 0, -5):
             porcentaje = sz / max
             self._ancho   = int(img.shape[1] * porcentaje)
             self._alto  = int(img.shape[0] * porcentaje)
