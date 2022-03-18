@@ -250,11 +250,11 @@ class ImageToText:
     def ColorMatrix(self, img):
 
         self._matrix = []
+        img = cv.cvtColor(img, cv.BGR2RGB)
         for i in range(self._alto):
             self._matrix.append([])
             for j in range(self._ancho):
-                b,g,r = img[i][j]
-                color = (r,g,b)
+                color = img[i][j]
                 if color in self.cached_colors.keys():
                     self._matrix[i].append(self.cached_colors[color])
                 else:
@@ -295,7 +295,6 @@ class ImageToText:
 
         self.cached_colors = {}
         out = False
-        matrixCreated: bool
 
         for sz in range(130, 0, -5):
             porcentaje = sz / max
@@ -323,5 +322,5 @@ class ImageToText:
 
 if(__name__ == "__main__"):
     #[110, 110, 0], [255, 255, 255], (color azul)
-    obj = ImageToText("pipo.jpg", color=2, generateCode=True)
+    obj = ImageToText("arch.jpg", color=2, generateCode=True)
     obj.Get_Image()
