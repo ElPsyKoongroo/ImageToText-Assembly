@@ -250,7 +250,6 @@ class ImageToText:
     def ColorMatrix(self, img):
 
         self._matrix = []
-        img = cv.cvtColor(img, cv.BGR2RGB)
         for i in range(self._alto):
             self._matrix.append([])
             for j in range(self._ancho):
@@ -292,6 +291,8 @@ class ImageToText:
         if self._color == 0:
             self.Get_Image_BW(img, max)
             return
+
+        img = cv.cvtColor(img, cv.BGR2RGB)
 
         self.cached_colors = {}
         out = False
