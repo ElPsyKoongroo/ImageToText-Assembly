@@ -258,8 +258,7 @@ class ImageToText:
         for i in range(self._alto):
             self._matrix.append([])
             for j in range(self._ancho):
-                b,g,r = img[i][j]
-                color = (r,g,b)
+                color = img[i][j]
                 if color in self.cached_colors.keys():
                     self._matrix[i].append(self.cached_colors[color])
                 else:
@@ -298,11 +297,12 @@ class ImageToText:
             self.Get_Image_BW(img, max)
             return
 
+        img = cv.cvtColor(img, cv.BGR2RGB)
+
         self.cached_colors = {}
         out = False
-        matrixCreated: bool
 
-        for sz in range(130, 0, -5):
+        for sz in range(200, 0, -5):
             porcentaje = sz / max
             self._ancho   = int(img.shape[1] * porcentaje)
             self._alto  = int(img.shape[0] * porcentaje)
@@ -328,6 +328,5 @@ class ImageToText:
 
 if(__name__ == "__main__"):
     #[110, 110, 0], [255, 255, 255], (color azul)
-
-    obj = ImageToText("fotos/ero1.jpg", color=2, generateCode=True)
+    obj = ImageToText("arch.jpg", color=2, generateCode=True)
     obj.Get_Image()
