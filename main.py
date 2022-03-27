@@ -20,7 +20,13 @@ Funcionamiento:
 
 inicio = '''.model small
 .stack 200h
+.data
+    total_pintar    dw 0
+    total_pintado   dw 0
 .code
+
+    mov ax, seg datos
+    mov ds, ax
 
     mov al, 13h
     mov ah, 0
@@ -32,22 +38,27 @@ inicio = '''.model small
     mov ax, 0Fh; Color con el que se rellena el dibujo
     jmp start
 
-line:
-    mov dx, 0
-
 line_loop:
-    mov es:[bx], al
-    inc dx
-    inc bx
-    cmp dx, cx
+    mov es:[di], dl
+    inc total_pintado
+    inc di
+    cmp total_pintado, total_pintar
     jne line_loop
     ret
+;p1 posicion de inicio
+;p2 total de puntos a pintar
+;p3 color a pintar
 
 _lineMacro MACRO p1, p2, p3
-    mov bx, p1
-    mov cx, p2
-    mov ax, p3
-    call line
+    ;mov datos[2], p1 ;bx
+
+    mov total_pintado, 0
+    mov total_pintar, p2 ;cx
+
+    mov dx, p3 ;ax
+    mov di, p1
+    
+    call line_loop
 ENDM
 
 start:
@@ -297,7 +308,7 @@ class ImageToText:
             self.Get_Image_BW(img, max)
             return
 
-        img = cv.cvtColor(img, cv.BGR2RGB)
+        img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
 
         self.cached_colors = {}
         out = False
@@ -328,5 +339,5 @@ class ImageToText:
 
 if(__name__ == "__main__"):
     #[110, 110, 0], [255, 255, 255], (color azul)
-    obj = ImageToText("arch.jpg", color=2, generateCode=True)
+    obj = ImageToText("arch.png", color=2, generateCode=True)
     obj.Get_Image()
