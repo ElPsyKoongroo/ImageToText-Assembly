@@ -22,10 +22,9 @@ inicio = '''.model small
 .stack 200h
 .data
     total_pintar    dw 0
-    total_pintado   dw 0
 .code
 
-    mov ax, seg datos
+    mov ax, seg total_pintar
     mov ds, ax
 
     mov al, 13h
@@ -35,24 +34,24 @@ inicio = '''.model small
     mov ax, 0A000h
     mov es, ax
 
-    mov ax, 0Fh; Color con el que se rellena el dibujo
+    mov ax, 0Fh ;Color con el que se rellena el dibujo
     jmp start
 
 line_loop:
     mov es:[di], dl
-    inc total_pintado
+    inc ax
     inc di
-    cmp total_pintado, total_pintar
+    cmp ax, total_pintar
     jne line_loop
     ret
+
 ;p1 posicion de inicio
 ;p2 total de puntos a pintar
 ;p3 color a pintar
 
 _lineMacro MACRO p1, p2, p3
-    ;mov datos[2], p1 ;bx
 
-    mov total_pintado, 0
+    mov ax, 0
     mov total_pintar, p2 ;cx
 
     mov dx, p3 ;ax
@@ -65,9 +64,40 @@ start:
 
 '''
 
+inicioPractica = '''.model small
+.stack 200h
+.code
+
+    mov al, 13h
+    mov ah, 0
+    int 10h
+
+    mov ax, 0A000h
+    mov es, ax
+
+    mov ax, 0 ;total de pantallas   printeadas
+
+    mov bx, 0 ;total de lineas      printeadas
+
+    mov cx, 0 ;total de pixeles     printeados
+    
+
+start:
+
+'''
+
 final = '''
     mov ah, 4Ch
     int 21h
+end'''
+
+finalPractica = '''
+
+    inc ax
+    mov bx, 0
+    mov cx, 0
+
+    jmp start
 end'''
 
 size_bw = 200
@@ -226,6 +256,29 @@ class ImageToText:
             f.write(final)
         return True
 
+    def GenerateCodePractica(self) -> bool:
+        toWrite = ((pos_i*320+pos_j, j) for pos_i, i in enumerate(self._matrix) for pos_j, j in enumerate(i))
+
+        offset = 320 - self._ancho
+
+        with open("output.asm", "w") as f:
+            f.write(inicioPractica)
+            last_line = 0
+
+            for pos, color in toWrite:
+
+                if pos//320 != last_line:
+                    last_line = pos//320
+                    f.write("   inc bx\n")
+                    f.write("   mov cx, 0\n")
+                
+                f.write("   mov di, {}\n".format(pos+offset))
+                f.write("   mov es:[di], {}\n".format(color))
+                f.write("   inc cx\n")
+
+            f.write(finalPractica)
+        return True
+
     def MatrixBW(self, img, output):
         for i in range(self._alto):
             self._matrix.append([])
@@ -269,12 +322,14 @@ class ImageToText:
         for i in range(self._alto):
             self._matrix.append([])
             for j in range(self._ancho):
-                color = img[i][j]
-                if color in self.cached_colors.keys():
-                    self._matrix[i].append(self.cached_colors[color])
+                (r,g,b) = img[i][j]
+                
+                
+                if (r,g,b) in self.cached_colors.keys():
+                    self._matrix[i].append(self.cached_colors[(r,g,b)])
                 else:
-                    closest = self.closest_colour(color)
-                    self.cached_colors[color] = closest
+                    closest = self.closest_colour((r,g,b))
+                    self.cached_colors[(r,g,b)] = closest
                     self._matrix[i].append(closest)
 
         print("Probando tamano: {} x {}".format(len(self._matrix[0]), len(self._matrix)))
@@ -313,7 +368,7 @@ class ImageToText:
         self.cached_colors = {}
         out = False
 
-        for sz in range(200, 0, -5):
+        for sz in range(100, 0, -5):
             porcentaje = sz / max
             self._ancho   = int(img.shape[1] * porcentaje)
             self._alto  = int(img.shape[0] * porcentaje)
@@ -327,12 +382,13 @@ class ImageToText:
                 self.ColorMatrix(img2)
 
             if self._genCode:
-                if not self.GenerateCode():
+                #if not self.GenerateCode():
+                if not self.GenerateCodePractica():
                     raise Exception("No se pudo generar el codigo")
 
                 with open("output.asm", "r") as f:
                     count = sum(1 for _ in f)
-                    if count < 4_500:
+                    if count < 10_000:
                         out = True
                 if out: break
         return
