@@ -2,8 +2,9 @@
 size_bw = 200
 size_color = 200
 
+PIXELES = 85
+
 import cv2 as cv    #opencv-python
-import numpy as np
 from math import pow
 import os
 
@@ -50,7 +51,7 @@ class ImageToText:
         out = False
 
         
-        porcentaje = 85 / max
+        porcentaje = PIXELES / max
         self._ancho   = int(img.shape[1] * porcentaje)
         self._alto  = int(img.shape[0] * porcentaje)
         img2 = cv.resize(img, (self._ancho, self._alto), interpolation = cv.INTER_AREA)
