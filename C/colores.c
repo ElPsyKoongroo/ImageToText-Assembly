@@ -1,7 +1,7 @@
 #include <math.h>
-#include <stdlib.h>
-#include <stdio.h>
 #include <process.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #define PIXELES 85
 #define ROJO 0
@@ -105,49 +105,46 @@ const int colors[][RGB] = {
     {0, 0, 0},       {0, 0, 0},       {0, 0, 0},       {0, 0, 0},
     {0, 0, 0},       {0, 0, 0},       {0, 0, 0},       {0, 0, 0}};
 
-void generate_asm(int color_matrix[PIXELES][PIXELES]){
+void generate_asm(int color_matrix[PIXELES][PIXELES]) {
 
     int last_line = 0;
     int posicion = 0;
-    int offset = DOSBOX_LINES-PIXELES-1;
+    int offset = DOSBOX_LINES - PIXELES - 1;
 
-    
     FILE *asm_code = fopen("output.asm", "a");
     fprintf(asm_code, "%s\n", inicio_practica);
 
-
-    for (int filas = 0; filas<PIXELES; filas++){
-        for(int columnas = 0; columnas<PIXELES; columnas++){ 
-            posicion = filas*DOSBOX_LINES+columnas;
-            if(posicion/DOSBOX_LINES != last_line){
-                last_line = posicion/DOSBOX_LINES;
+    for (int filas = 0; filas < PIXELES; filas++) {
+        for (int columnas = 0; columnas < PIXELES; columnas++) {
+            posicion = filas * DOSBOX_LINES + columnas;
+            if (posicion / DOSBOX_LINES != last_line) {
+                last_line = posicion / DOSBOX_LINES;
                 fprintf(asm_code, "    inc bx\n");
                 fprintf(asm_code, "   mov cx, 0\n");
             }
-            fprintf(asm_code, "   mov di, %d\n", posicion+offset);
-            fprintf(asm_code, "   mov es:[di], %d\n",color_matrix[filas][columnas]);
+            fprintf(asm_code, "   mov di, %d\n", posicion + offset);
+            fprintf(asm_code, "   mov es:[di], %d\n",
+                    color_matrix[filas][columnas]);
             fprintf(asm_code, "   inc cx\n");
         }
     }
 
     fprintf(asm_code, "%s", final_practica);
-    fclose(asm_code);   
-}  
-
-int get_key(int aux[RGB]){
-    return aux[ROJO] + aux[VERDE] + aux[AZUL];
+    fclose(asm_code);
 }
 
-int get_best_color(int request_red, int request_green, int request_blue){
-    int aux[n_colors][RGB]; 
+int get_key(int aux[RGB]) { return aux[ROJO] + aux[VERDE] + aux[AZUL]; }
 
-    for(int i = 0; i<n_colors; i++){
+int get_best_color(int request_red, int request_green, int request_blue) {
+    int aux[n_colors][RGB];
+
+    for (int i = 0; i < n_colors; i++) {
         int r_c = colors[i][ROJO];
         int g_c = colors[i][VERDE];
         int b_c = colors[i][AZUL];
 
-        int rd = (int)pow(r_c - request_red,  2);
-        int gd = (int)pow(g_c - request_green,2);
+        int rd = (int)pow(r_c - request_red, 2);
+        int gd = (int)pow(g_c - request_green, 2);
         int bd = (int)pow(b_c - request_blue, 2);
 
         aux[i][ROJO] = rd;
@@ -156,31 +153,29 @@ int get_best_color(int request_red, int request_green, int request_blue){
     }
 
     int best_color_index = 0;
-    for(int i = 0; i<n_colors-1; i++){
-        if(get_key(aux[best_color_index]) > get_key(aux[i+1])){
+    for (int i = 0; i < n_colors - 1; i++) {
+        if (get_key(aux[best_color_index]) > get_key(aux[i + 1])) {
             best_color_index = i;
         }
     }
     return best_color_index;
 }
 
-void generate_color_matrix(int image_colors[PIXELES][PIXELES][RGB]){
+void generate_color_matrix(int image_colors[PIXELES][PIXELES][RGB]) {
     int matrix_color[PIXELES][PIXELES];
 
-    for (int filas = 0; filas<PIXELES; filas++){
-        for(int columnas = 0; columnas<PIXELES; columnas++){
+    for (int filas = 0; filas < PIXELES; filas++) {
+        for (int columnas = 0; columnas < PIXELES; columnas++) {
             int closest = get_best_color(image_colors[filas][columnas][ROJO],
                                          image_colors[filas][columnas][VERDE],
                                          image_colors[filas][columnas][AZUL]);
             matrix_color[filas][columnas] = closest;
-            
         }
     }
     generate_asm(matrix_color);
-} 
+}
 
-int main(int argc, char* argv){
-
+int main(int argc, char *argv) {
 
     int image_colors[PIXELES][PIXELES][RGB];
 
@@ -189,13 +184,13 @@ int main(int argc, char* argv){
 
     FILE *f = fopen("colors.txt", "r");
 
-    char buff[RGB] = {0};    
+    char buff[RGB] = {0};
 
-    for(int fila = 0; fila<PIXELES;fila++){
-        for(int columna=0; columna<PIXELES; columna++){
-            for(int color = 0; color<RGB; color++){
+    for (int fila = 0; fila < PIXELES; fila++) {
+        for (int columna = 0; columna < PIXELES; columna++) {
+            for (int color = 0; color < RGB; color++) {
                 fscanf(f, "%3s", buff);
-                image_colors[fila][columna][color] =  atoi(buff);
+                image_colors[fila][columna][color] = atoi(buff);
             }
         }
     }
