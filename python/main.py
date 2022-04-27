@@ -197,6 +197,34 @@ class ImageToText:
         cv.waitKey(0)
         cv.destroyAllWindows()
 
+    def GenerateCodeBW(self) -> bool:
+        toWrite = (pos_i*320+pos_j for pos_i, i in enumerate(self._matrix) for pos_j, j in enumerate(i) if j == self._text)
+
+        offset = 320 - self._ancho
+
+        #f.write("    mov es:[{}], al\n".format(i+offset))
+        with open("main.asm", "w") as f:
+            f.write(inicio)
+            cont = 0
+            first = -1
+            for i in toWrite:
+                
+                if(cont == 0):
+                    first = i
+                
+                if(i-cont == first):
+                    cont+=1
+                    continue
+
+                f.write("    mov cx, {}\n".format(cont))
+                f.write("    mov bx, {}\n".format(first+offset))
+                f.write("    call line\n")
+                cont = 0
+
+
+            f.write(final)
+        return True
+
     def GenerateCode(self) -> bool:
         toWrite = ((pos_i*320+pos_j, j) for pos_i, i in enumerate(self._matrix) for pos_j, j in enumerate(i))
 
@@ -229,21 +257,7 @@ class ImageToText:
         return True
 
     def GenerateCodePractica(self) -> bool:
-        '''
-        [ROJO, VERDE, AZUL], [ROJO, VERDE, AZUL], [ROJO, VERDE, AZUL], [ROJO, VERDE, AZUL], 
-        [ROJO, VERDE, AZUL], [ROJO, VERDE, AZUL], [ROJO, VERDE, AZUL], [ROJO, VERDE, AZUL], 
-        [ROJO, VERDE, AZUL], [ROJO, VERDE, AZUL], [ROJO, VERDE, AZUL], [ROJO, VERDE, AZUL], 
-        [ROJO, VERDE, AZUL], [ROJO, VERDE, AZUL], [ROJO, VERDE, AZUL], [ROJO, VERDE, AZUL], 
-        [ROJO, VERDE, AZUL], [ROJO, VERDE, AZUL], [ROJO, VERDE, AZUL], [ROJO, VERDE, AZUL], 
-        
-        
-        (0, RGB)
-
-        '''
-
-
-        toWrite = ((pos_i*320+pos_j, j) for pos_i, i in enumerate(self._matrix)
-                   for pos_j, j in enumerate(i))
+        toWrite = ((pos_i*320+pos_j, j) for pos_i, i in enumerate(self._matrix) for pos_j, j in enumerate(i))
 
         offset = 320 - self._ancho
 
@@ -265,6 +279,43 @@ class ImageToText:
             f.write(finalPractica)
         return True
 
+    def MatrixBW(self, img, output):
+        for i in range(self._alto):
+            self._matrix.append([])
+            for j in range(self._ancho):
+                if (output[i][j][0] != 0 or output[i][j][1] != 0 or output[i][j][2] != 0):
+                    self._matrix[i].append(1)
+                else:
+                    self._matrix[i].append(0)
+
+        if self._showResult:
+            self.ShowImage(img, output)
+        if self._showMatrix:
+            self.ShowMatrix()
+
+        if self._genCode:
+            self.GenerateCodeBW()
+
+    def GrayMatrix(self, img):
+
+        img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+        self._matrix = []
+        for i in range(self._alto):
+            self._matrix.append([])
+            for j in range(self._ancho):
+
+                final_color = 16
+                aux = 16
+                color = img[i][j]
+
+                while color > aux:
+                    final_color += 1
+                    aux += 16
+
+
+                self._matrix[i].append(final_color)
+        print("Probando tamano: {} x {}".format(len(self._matrix[0]), len(self._matrix)))
+
     def ColorMatrix(self, img):
 
         self._matrix = []
@@ -283,44 +334,63 @@ class ImageToText:
 
         print("Probando tamano: {} x {}".format(len(self._matrix[0]), len(self._matrix)))
 
+    def Get_Image_BW(self, img, max):
+        porcentaje = self._size / max
+
+        self._ancho   = int(img.shape[1] * porcentaje)
+        self._alto  = int(img.shape[0] * porcentaje)
+
+        dim = (self._ancho, self._alto)
+
+
+        img = cv.resize(img, dim, interpolation = cv.INTER_AREA)
+
+        minimo = np.array(self._color_minimo, dtype = "uint8")
+        maximo = np.array(self._color_maximo, dtype = "uint8")
+
+        mask = cv.inRange(img, minimo, maximo)
+        output = cv.bitwise_and(img, img, mask = mask)
+        
+        self.MatrixBW(img, output)
+
     def Get_Image(self):
         
         img = cv.imread(self._imagePath)
 
         max = img.shape[1] if img.shape[1] > img.shape[0] else img.shape[0]
 
+        if self._color == 0:
+            self.Get_Image_BW(img, max)
+            return
+
         img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
 
         self.cached_colors = {}
         out = False
 
-        for sz in range(85, 0, -5):
+        for sz in range(100, 0, -5):
             porcentaje = sz / max
             self._ancho   = int(img.shape[1] * porcentaje)
             self._alto  = int(img.shape[0] * porcentaje)
             img2 = cv.resize(img, (self._ancho, self._alto), interpolation = cv.INTER_AREA)
 
-            #self.ColorMatrix(img2)
+            if self._color == 1:
+                img2 = cv.cvtColor(img2, cv.COLOR_BGR2GRAY)
+                self.GrayMatrix(img2)
 
-            print(f"{self._alto}, {self._ancho}")
+            else:
+                self.ColorMatrix(img2)
 
-            with open("colors.txt", "w+") as f:
-                for i in range(self._alto):
-                    for j in range(self._ancho):
-                        (r,g,b) = img2[i][j]
-                        f.write(f"{r:03}{g:03}{b:03}")
-                    f.write("\n")
-            
-            break
-            # if self._genCode:
-            #     if not self.GenerateCodePractica():
-            #         raise Exception("No se pudo generar el codigo")
+            if self._genCode:
+                #if not self.GenerateCode():
+                if not self.GenerateCodePractica():
+                    raise Exception("No se pudo generar el codigo")
 
-            #     with open("output.asm", "r") as f:
-            #         count = sum(1 for _ in f)
-            #         if count < 20_000:
-            #             out = True
-            #     if out: break
+                with open("output.asm", "r") as f:
+                    count = sum(1 for _ in f)
+                    if count < 10_000:
+                        out = True
+                if out: break
         return
 
 if(__name__ == "__main__"):
