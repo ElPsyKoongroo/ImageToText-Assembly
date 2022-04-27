@@ -51,10 +51,10 @@ class ImageToText:
         out = False
 
         
-        porcentaje = PIXELES / max
-        self._ancho   = int(img.shape[1] * porcentaje)
+        porcentaje  = PIXELES / max
+        self._ancho = int(img.shape[1] * porcentaje)
         self._alto  = int(img.shape[0] * porcentaje)
-        img2 = cv.resize(img, (self._ancho, self._alto), interpolation = cv.INTER_AREA)
+        img2        = cv.resize(img, (self._ancho, self._alto), interpolation = cv.INTER_AREA)
 
         print(f"{self._alto}, {self._ancho}")
 
